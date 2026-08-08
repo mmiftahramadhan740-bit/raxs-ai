@@ -966,41 +966,41 @@ DALAM SETIAP JAWABANMU, IKUTI ATURAN BERIKUT:
             ];
         }
 
-        // 3. KIRIM KE API GROQ
-        const response = await fetch(GROQ_API_URL, {
-            method: 'POST',
-            headers: {
-    'Content-Type': 'application/json'
-			}
-	
-            body: JSON.stringify({
-                model: selectedModel,
-                messages: payloadMessages, // Gunakan payloadMessages yang sudah disusun rapi
-                max_tokens: 2048
-            })
-        });
 
-        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+// 3. KIRIM KE API GROQ
+const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    }, // <-- Tanda koma di sini sebelumnya hilang
+    body: JSON.stringify({
+        model: selectedModel,
+        messages: payloadMessages, 
+        max_tokens: 2048
+    })
+});
 
-        const data = await response.json();
-        let botReply = data.choices[0]?.message?.content || "Tidak ada respon.";
+if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
 
-        // Pembersihan tag proses berpikir
-        botReply = botReply.replace(/<think>[\s\S]*?<\/think>/gi, '');
-        if (botReply.trim().startsWith("The user")) {
-            const parts = botReply.split("\n\n");
-            if (parts.length > 1) { parts.shift(); botReply = parts.join("\n\n"); }
-        }
+const data = await response.json();
+let botReply = data.choices?.[0]?.message?.content || "Tidak ada respon.";
 
-        removeShimmer(shimmerId);
-        appendMessage(botReply.trim(), 'bot', true);
-
-    } catch (error) {
-        removeShimmer(shimmerId);
-        appendMessage(`Error: ${error.message}`, 'bot', false);
-    }
+// Pembersihan tag proses berpikir
+botReply = botReply.replace(/<think>[\s\S]*?<\/think>/gi, '');
+if (botReply.trim().startsWith("The user")) {
+    const parts = botReply.split("\n\n");
+    if (parts.length > 1) { parts.shift(); botReply = parts.join("\n\n"); }
 }
 
+removeShimmer(shimmerId);
+appendMessage(botReply.trim(), 'bot', true);
+
+} catch (error) {
+    removeShimmer(shimmerId);
+    appendMessage(`Error: ${error.message}`, 'bot', false);
+}
+
+        
 // --- PILIH GAMBAR: HANYA TAMPILKAN PREVIEW, BELUM DIKIRIM ---
 function handleImageUpload(event) {
     const file = event.target.files[0];

@@ -1148,7 +1148,7 @@ async function getTranslation(text, targetLang) {
 }
 
 // Fungsi Utama Tombol Bahasa
-async function toggleLanguage() {
+		async function toggleLanguage() {
     if (isTranslating) return;
     
     currentLang = currentLang === 'id' ? 'en' : 'id';
@@ -1182,39 +1182,54 @@ async function toggleLanguage() {
         if (el.querySelector('img')) continue;
 
         const parentMessage = el.closest('.message');
-        let originalText = parentMessage?.dataset.raw;
+        if (!parentMessage) continue;
 
-        if (!originalText) {
-            const clone = el.cloneNode(true);
-            const existingCopyBtn = clone.querySelector('.copy-btn');
-            if (existingCopyBtn) existingCopyBtn.remove();
-            originalText = (clone.innerText || clone.textContent || '').trim();
+        // 1. Simpan teks asli pertama kali jika belum tersimpan
+        if (!parentMessage.dataset.originalText) {
+            let rawText = parentMessage.dataset.raw;
+            if (!rawText) {
+                const clone = el.cloneNode(true);
+                const existingCopyBtn = clone.querySelector('.copy-btn');
+                if (existingCopyBtn) existingCopyBtn.remove();
+                rawText = (clone.innerText || clone.textContent || '').trim();
+            }
+            parentMessage.dataset.originalText = rawText;
         }
 
-        if (!originalText) continue;
+        let targetText = '';
 
-        // Mengubah 'const' menjadi 'let' agar string bisa dibersihkan
-        let translatedText = await getTranslation(originalText, currentLang);
-
-        // Hapus simbol '#' liar jika teks asli sebenarnya bukan heading
-        if (!originalText.includes('#')) {
-            translatedText = translatedText.replace(/^#+\s*/gm, '');
-        }
-
-        if (parentMessage) parentMessage.dataset.raw = translatedText;
-
-        if (typeof marked !== 'undefined' && parentMessage && parentMessage.classList.contains('bot')) {
-            el.innerHTML = marked.parse(translatedText);
+        // 2. Jika kembali ke Bahasa Indonesia, ambil dari teks asli tanpa panggil API
+        if (currentLang === 'id') {
+            targetText = parentMessage.dataset.originalText;
         } else {
-            el.innerText = translatedText;
+            // 3. Jika ke Bahasa Inggris, gunakan cache jika ada, atau translate sekali saja
+            if (parentMessage.dataset.translatedEn) {
+                targetText = parentMessage.dataset.translatedEn;
+            } else {
+                targetText = await getTranslation(parentMessage.dataset.originalText, 'en');
+                if (!parentMessage.dataset.originalText.includes('#')) {
+                    targetText = targetText.replace(/^#+\s*/gm, '');
+                }
+                parentMessage.dataset.translatedEn = targetText;
+            }
+        }
+
+        // 4. Update dataset.raw agar tombol salin membaca bahasa yang sedang aktif
+        parentMessage.dataset.raw = targetText;
+
+        // Render ulang ke DOM
+        if (typeof marked !== 'undefined' && parentMessage.classList.contains('bot')) {
+            el.innerHTML = marked.parse(targetText);
+        } else {
+            el.innerText = targetText;
         }
 
         // Update Tombol Salin
-        if (parentMessage && parentMessage.classList.contains('bot')) {
+        if (parentMessage.classList.contains('bot')) {
             const oldCopyBtn = parentMessage.querySelector('.copy-btn');
             if (oldCopyBtn) oldCopyBtn.remove();
 
-            const newEncodedText = encodeURIComponent(translatedText);
+            const newEncodedText = encodeURIComponent(targetText);
             const copyBtnHTML = `
                 <button class="copy-btn" onclick="copyMessageText(this, '${newEncodedText}')">
                     <span class="material-icons-outlined" style="font-size: 12px;">content_copy</span> Salin
@@ -1227,6 +1242,7 @@ async function toggleLanguage() {
     isTranslating = false;
     if (langBtn) langBtn.innerText = currentLang === 'id' ? 'EN' : 'ID';
 }
+
 
     function copyMessageText(buttonElement, encodedText) {
     const originalText = decodeURIComponent(encodedText);

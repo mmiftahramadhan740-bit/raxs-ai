@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant - Groq Powered</title>
+    
+    <!-- 1. Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    
+    <!-- 2. Library Marked.js (Membuat Tampilan Bintang ** dan * Jadi Rapi & Tebal) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+                :root {
+            --bg-main: #f0f4f9;
+            --bg-sidebar: #f3f6fc;
+            --bg-sidebar-hover: #e3e7ed;
+            --bg-sidebar-active: #d3e3fd;
+            --chat-bg: #ffffff;
+            --text-primary: #1f1f1f;
+            --text-secondary: #444746;
+            --user-msg-bg: #e9eef6;
+            --border-color: #e3e7ed;
+            --input-bg: #ffffff;
+            --font-family: 'Inter', sans-serif;
+            --transition: all 0.2s ease;
+
+            /* --- VARIABEL GRADASI BARU --- */
+            --gradient-utama: linear-gradient(135deg, #ff7e5f 0%, #f55036 100%);
+            --gradient-sidebar: linear-gradient(180deg, #f3f6fc 0%, #e8effa 100%);
+        }
+
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        aside {
+    width: 280px;
+    background-color: #f8fafc;
+    background-image: 
+        /* Glow lembut oranye di sudut atas agar senada dengan tombol Obrolan Baru */
+        radial-gradient(circle at 10% 0%, rgba(255, 126, 95, 0.12) 0%, transparent 45%),
+        /* Pendaran halus di sudut bawah */
+        radial-gradient(circle at 90% 100%, rgba(245, 80, 54, 0.05) 0%, transparent 40%),
+        /* Pola titik-titik (dot pattern) minimalis */
+        radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+    background-size: 100% 100%, 100% 100%, 20px 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border-right: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+    z-index: 30;
+    height: 100%;
+    flex-shrink: 0;
+		}
+
+     .new-chat-btn {
+    background: linear-gradient(135deg, #ff7e5f 0%, #f55036 100%); /* <-- Gradasi Oranye-Merah */
+    color: white; /* <-- Ganti warna teks jadi putih */
+    border: none;
+    padding: 14px 16px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+    margin-bottom: 24px;
+    width: 100%;
+    box-shadow: 0 4px 10px rgba(245, 80, 54, 0.25); /* Efek bayangan */
+}
+
+
+.new-chat-btn:hover {
+    background: linear-gradient(135deg, #e66f52 0%, #d9432b 100%);
+    box-shadow: 0 6px 14px rgba(245, 80, 54, 0.35);
+}
+
+
+        .history-section {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 0 12px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        .history-item:hover {
+            background-color: var(--bg-sidebar-hover);
+        }
+
+        .history-item.active {
+            background-color: var(--bg-sidebar-active);
+            font-weight: 500;
+        }
+
+        .item-text {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 85%;
+        }
+
+        .delete-hist-btn {
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 50%;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover .delete-hist-btn {
+            opacity: 1;
+        }
+
+        .delete-hist-btn:hover {
+            opacity: 1;
+            color: #d93025;
+            background-color: rgba(217, 48, 37, 0.1);
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.2);
+            z-index: 25;
+        }
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* Menyesuaikan layar HP secara akurat */
+    position: relative;
+    z-index: 10;
+    background-color: #fcfdfe;
+    background-image: 
+        radial-gradient(circle at 50% 100%, rgba(255, 126, 95, 0.15) 0%, rgba(245, 80, 54, 0.03) 50%, transparent 80%),
+        radial-gradient(circle at 10% 20%, rgba(245, 80, 54, 0.06) 0%, transparent 45%),
+        radial-gradient(#e2e8f0 1.2px, transparent 1.2px);
+    background-size: 100% 100%, 100% 100%, 24px 24px;
+}
+		
+
+header {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .menu-btn:hover {
+            background-color: var(--bg-main);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+.brand .ai-logo {
+    font-size: 28px;
+    background: linear-gradient(135deg, #ff7e5f 0%, #f55036 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 600;
+}
+
+        .brand h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .lang-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .lang-btn:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+
+        .chat-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 20px 20px;
+    scroll-behavior: smooth;
+		}
+		
+        .message {
+            display: flex;
+            gap: 18px;
+            margin-bottom: 32px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInMsg 0.3s ease forwards;
+        }
+
+        @keyframes fadeInMsg {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background-color: #e9eef6;
+            color: #555;
+        }
+
+        .message.bot .avatar {
+    background: linear-gradient(135deg, #ff7e5f 0%, #f55036 100%);
+    color: white;
+}
+
+        .content {
+            padding: 8px 0;
+            line-height: 1.6;
+            font-size: 1rem;
+            width: 100%;
+            white-space: pre-wrap;
+        }
+
+        .message.user .content {
+            background-color: var(--user-msg-bg);
+            padding: 12px 20px;
+            border-radius: 24px;
+            max-width: 70%;
+            width: auto;
+            white-space: normal;
+        }
+
+        .chat-image {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 12px;
+            margin-top: 8px;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .message.user .chat-image {
+            margin-left: auto;
+        }
+
+        .input-container {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: 100%;
+    max-width: 750px;
+    margin: 0 auto;
+    padding: 12px 16px 16px;
+    background: transparent;
+		}
+		
+        .input-wrapper {
+            background-color: var(--bg-main);
+            border-radius: 32px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        /* --- PREVIEW GAMBAR SEBELUM DIKIRIM --- */
+        .image-preview-wrapper {
+            display: none;
+            padding: 0 14px 10px 14px;
+        }
+
+        .image-preview-wrapper.active {
+            display: block;
+        }
+
+        .image-preview-box {
+            position: relative;
+            display: inline-block;
+            border-radius: 12px;
+        }
+
+        .image-preview-box img {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .image-preview-remove {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: #444746;
+            color: #fff;
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .image-preview-remove .material-icons-outlined {
+            font-size: 14px;
+        }
+
+        .image-preview-remove:hover {
+            background-color: #d93025;
+        }
+
+        .input-wrapper:focus-within {
+            background-color: #e9eef6;
+        }
+
+        #user-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 14px 0;
+            font-size: 1rem;
+            color: var(--text-primary);
+            font-family: var(--font-family);
+        }
+
+        .image-upload-label {
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .image-upload-label:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .input-action-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .input-action-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .input-action-btn.send-btn {
+            color: #f55036;
+        }
+
+        /* Shimmer Loading */
+        .shimmer-loading {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .shimmer-block {
+            height: 14px;
+            background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        @media (max-width: 768px) {
+            aside {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+            }
+            aside.open {
+                left: 0;
+            }
+            aside.open ~ .sidebar-overlay {
+                display: block;
+            }
+            .chat-view { padding: 20px 16px 120px; }
+            .message.user .content { max-width: 85%; }
+        }
+        /* Styling khusus agar respon AI dari Markdown terlihat sangat rapi */
+.message.bot .content {
+    line-height: 1.6;
+    font-size: 15px;
+    color: #2b2b2b;
+}
+
+.message.bot .content p {
+    margin-bottom: 12px;
+}
+
+.message.bot .content strong {
+    font-weight: 700;
+    color: #111111;
+}
+
+.message.bot .content ul, 
+.message.bot .content ol {
+    margin: 8px 0 14px 20px;
+    padding-left: 10px;
+}
+
+.message.bot .content li {
+    margin-bottom: 6px;
+}
+
+.message.bot .content h1, 
+.message.bot .content h2, 
+.message.bot .content h3 {
+    margin-top: 14px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #d3e3fd 0%, #f55036 100%); /* Gradasi scrollbar */
+    border-radius: 4px;
+}
+/* --- STYLING TOMBOL SALIN DI PESAN BOT --- */
+.message.bot {
+    position: relative;
+}
+
+.copy-btn {
+    position: absolute;
+    bottom: -8px;
+    right: 12px;
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    opacity: 1; /* ✅ Default: Selalu terlihat (khususnya untuk HP/Tablet) */
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* ✅ Hanya sembunyikan tombol jika perangkat mendukung hover (Komputer / Laptop / Mouse) */
+@media (hover: hover) {
+    .copy-btn {
+        opacity: 0;
+    }
+    .message.bot:hover .copy-btn {
+        opacity: 1;
+    }
+}
+
+.copy-btn:hover {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    border-color: #ccc;
+}
+.welcome-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.welcome-icon {
+    font-size: 52px;
+    background: linear-gradient(135deg, #ff7e5f 0%, #f55036 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.welcome-title {
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+.message .content h1,
+.message .content h2,
+.message .content h3 {
+    font-size: 1rem !important;
+    font-weight: 600;
+    margin: 4px 0;
+    line-height: 1.4;
+}
+@media (max-width: 768px) {
+    .chat-view {
+        padding: 16px 12px 12px;
+    }
+    
+    .input-container {
+        padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+    }
+    
+    .welcome-title {
+        font-size: 1.2rem;
+    }
+		}
+	
+    </style>
+</head>
+<body>
+    <aside id="sidebar">
+        <button class="new-chat-btn" onclick="startNewChat()">
+            <span class="material-icons-outlined">add</span>
+            <span id="btn-new-chat">Obrolan Baru</span>
+        </button>
+        <div class="history-title" id="history-label">Riwayat</div>
+        <div class="history-section" id="history-list"></div>
+    </aside>
+
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="main-content">
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" onclick="toggleSidebar()">
+                    <span class="material-icons-outlined">menu</span>
+                </button>
+               <div class="brand">
+    <span class="material-icons-outlined ai-logo">auto_awesome</span>
+    <h1 id="app-title">Raxs AI</h1>
+</div>
+
+            </div>
+            <button class="lang-btn" id="lang-btn" onclick="toggleLanguage()">EN</button>
+        </header>
+
+        <div class="chat-view" id="chat-view"></div>
+
+        <div class="input-container">
+            <div class="image-preview-wrapper" id="image-preview-wrapper">
+                <div class="image-preview-box">
+                    <img id="image-preview-thumb" src="" alt="Preview gambar">
+                    <button type="button" class="image-preview-remove" onclick="removePendingImage()" title="Hapus gambar">
+                        <span class="material-icons-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <label for="image-input" class="image-upload-label">
+                    <span class="material-icons-outlined">add_photo_alternate</span>
+                </label>
+                <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                
+                <input type="text" id="user-input" placeholder="Tanya sesuatu pada Groq..." onkeypress="handleKeyPress(event)">
+                <button class="input-action-btn send-btn" onclick="sendMessage()"><span class="material-icons-outlined">send</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+ 
+         const GROQ_API_URL = '/api/translate';
+		
+        const localization = {
+            id: {
+                title: "RAXS AI",
+                newChat: "Obrolan Baru",
+                history: "Riwayat",
+                welcome: "Halo! Saya asisten AI berbasis Groq. Ada yang bisa saya bantu hari ini?",
+                placeholder: "Tanya sesuatu pada Groq..."
+            },
+            en: {
+                title: "RAXS AI",
+                newChat: "New Chat",
+                history: "History",
+                welcome: "Hello! I'm a Groq-powered AI assistant. How can I help you today?",
+                placeholder: "Ask Groq something..."
+            }
+
+        };
+        const randomGreetings = {
+    id: [
+        "Apa yang ingin Anda tanyakan hari ini?",
+        "Ada ide atau topik menarik yang ingin dibahas?",
+        "Apa yang ingin Anda pelajari atau buat hari ini?",
+        "Ada masalah yang bisa saya bantu selesaikan?"
+    ],
+    en: [
+        "What would you like to ask today?",
+        "Have an interesting idea to discuss?",
+        "What would you like to learn or build today?",
+        "Is there a problem I can help you solve?"
+    ]
+};
+
+function showWelcomeScreen() {
+    const greetingsList = randomGreetings[currentLang] || randomGreetings.id;
+    const randomIndex = Math.floor(Math.random() * greetingsList.length);
+    const selectedGreeting = greetingsList[randomIndex];
+
+    chatView.innerHTML = `
+        <div class="welcome-screen" id="welcome-screen">
+            <span class="material-icons-outlined welcome-icon">auto_awesome</span>
+            <h2 class="welcome-title">${selectedGreeting}</h2>
+        </div>
+    `;
+}
+
+        let currentLang = 'id';
+        let conversations = JSON.parse(localStorage.getItem('chat_history')) || [];
+        let activeChatId = localStorage.getItem('active_chat_id') || null;
+
+        const chatView = document.getElementById('chat-view');
+        const userInput = document.getElementById('user-input');
+        const sidebar = document.getElementById('sidebar');
+
+        function initApp() {
+            renderHistoryList();
+            if (activeChatId && conversations.find(c => c.id === activeChatId)) {
+                loadChat(activeChatId);
+            } else {
+                startNewChat();
+            }
+        }
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+        }
+
+   function startNewChat() {
+    activeChatId = 'chat_' + Date.now();
+    localStorage.setItem('active_chat_id', activeChatId);
+    
+    // Panggil fungsi sambutan baru
+    showWelcomeScreen();
+    
+    renderHistoryList();
+    sidebar.classList.remove('open');
+}
+
+
+        function saveMessageToHistory(text, sender) {
+    // 1. Cari apakah ada obrolan yang sedang aktif
+    let chat = conversations.find(c => c.id === activeChatId);
+
+    // 2. JIKA BELUM ADA (misal baru buka web), BIKIN OBROLAN BARU OTOMATIS!
+    if (!chat) {
+        const newChatId = Date.now().toString();
+        chat = { id: newChatId, title: "Obrolan Baru", messages: [] };
+        conversations.push(chat);
+        activeChatId = newChatId;
+        localStorage.setItem('active_chat_id', activeChatId);
+    }
+
+    // 3. Ringkas jika ada gambar Base64 agar localStorage tidak jebol (Bug C)
+    let cleanText = text;
+    if (text.includes('data:image/') || text.includes('<img')) {
+        cleanText = '📷 [Gambar disematkan]';
+    }
+
+    // 3.5 Set judul obrolan otomatis dari pesan pertama milik user (kalau masih judul default)
+    if (sender === 'user' && (chat.title === "Obrolan Baru" || chat.title === "New Chat")) {
+        const titleSource = cleanText.replace(/\s+/g, ' ').trim();
+        if (titleSource === '📷 [Gambar disematkan]') {
+            chat.title = '📷 Obrolan dengan Gambar';
+        } else if (titleSource.length > 0) {
+            chat.title = titleSource.length > 32 ? titleSource.substring(0, 32) + '…' : titleSource;
+        }
+    }
+
+    // 4. Masukkan pesan ke dalam array riwayat obrolan
+    chat.messages.push({ sender, text: cleanText });
+
+    // 5. Simpan secara permanen ke memori browser
+    try {
+        // Sesuaikan nama key 'raxs_conversations' dengan yang kamu pakai di kodemu (misal: 'chat_history' dll)
+        localStorage.setItem('chat_history', JSON.stringify(conversations));
+    } catch (e) {
+        console.warn('LocalStorage penuh atau error:', e);
+    }
+
+    // 6. Render ulang sidebar HANYA saat judul baru saja di-set (pesan pertama user)
+    // — bukan setiap pesan, agar tidak boros re-render
+    const isFirstUserMsg = sender === 'user' && chat.messages.length === 1;
+    if (isFirstUserMsg && typeof renderHistoryList === 'function') {
+        renderHistoryList();
+    }
+}
+
+
+        function renderHistoryList() {
+            const listContainer = document.getElementById('history-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+
+            conversations.forEach(chat => {
+                const item = document.createElement('div');
+                item.classList.add('history-item');
+                if (chat.id === activeChatId) item.classList.add('active');
+                
+                item.addEventListener('click', () => {
+                    loadChat(chat.id);
+                });
+
+                item.innerHTML = `
+                    <div class="item-text">
+                        <span class="material-icons-outlined" style="font-size: 18px;">chat_bubble_outline</span>
+                        <span>${chat.title}</span>
+                    </div>
+                    <button class="delete-hist-btn" title="Hapus Obrolan">
+                        <span class="material-icons-outlined" style="font-size: 18px;">delete</span>
+                    </button>
+                `;
+
+                const deleteBtn = item.querySelector('.delete-hist-btn');
+                deleteBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    deleteChat(chat.id);
+                });
+
+                listContainer.appendChild(item);
+            });
+        }
+
+function loadChat(id) {
+    activeChatId = id;
+    localStorage.setItem('active_chat_id', id);
+    renderHistoryList();
+
+    const chat = conversations.find(c => c.id === id);
+    chatView.innerHTML = '';
+    
+    if (chat && chat.messages) {
+        chat.messages.forEach(msg => {
+            // Render semua pesan sebagai teks/Markdown (gambar disimpan sebagai teks placeholder)
+            appendMessage(msg.text, msg.sender, false);
+        });
+        chatView.scrollTop = chatView.scrollHeight;
+    }
+    sidebar.classList.remove('open');
+}
+
+
+        function deleteChat(id) {
+            conversations = conversations.filter(c => c.id !== id);
+            localStorage.setItem('chat_history', JSON.stringify(conversations));
+            
+            if (activeChatId === id) {
+                activeChatId = null;
+                startNewChat();
+            } else {
+                renderHistoryList();
+            }
+        }
+// Variable untuk menyimpan memori foto terakhir
+let lastUploadedImageBase64 = null;
+
+// Konfigurasi marked agar perpindahan baris (enter) dibaca dengan rapi[span_2](start_span)[span_2](end_span)
+if (typeof marked !== 'undefined') {
+    marked.setOptions({
+        gfm: true,
+        breaks: true
+    });
+}
+
+// --- FUNGSI APPEND MESSAGE (VERSI BERSIH & MENGGUNAKAN MARKED.JS) ---[span_3](start_span)[span_3](end_span)
+function appendMessage(text, sender, shouldSave = true) {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', sender);
+    
+    // TAMBAHKAN BARIS INI:
+    msgDiv.dataset.raw = text; 
+    const avatarHTML = sender === 'user' 
+    ? '<div class="avatar"><span class="material-icons-outlined">person</span></div>'
+    : '<div class="avatar"><span class="material-icons-outlined">auto_awesome</span></div>';
+
+
+    let formattedContent = text;
+
+    if (sender === 'bot') {
+        // Menggunakan marked.js untuk merender Markdown secara presisi & profesional[span_4](start_span)[span_4](end_span)
+        formattedContent = typeof marked !== 'undefined' ? marked.parse(text) : text;
+    }
+
+    // --- FITUR TOMBOL SALIN KHUSUS UNTUK BOT ---[span_5](start_span)[span_5](end_span)
+    let copyButtonHTML = '';
+    if (sender === 'bot') {
+        const safeText = encodeURIComponent(text);
+        copyButtonHTML = `
+            <button class="copy-btn" onclick="copyMessageText(this, '${safeText}')" title="Salin Teks">
+                <span class="material-icons-outlined" style="font-size: 12px;">content_copy</span> Salin
+            </button>
+        `;
+    }
+
+    msgDiv.innerHTML = `${avatarHTML}<div class="content">${formattedContent}${copyButtonHTML}</div>`;
+    chatView.appendChild(msgDiv);
+    chatView.scrollTop = chatView.scrollHeight;
+
+    if (shouldSave) saveMessageToHistory(text, sender);
+}
+
+
+// --- FUNGSI KIRIM TEKS + GAMBAR (GAMBAR TIDAK OTOMATIS TERKIRIM SAAT DIPILIH) ---
+async function sendMessage() {
+    const welcomeEl = document.getElementById('welcome-screen');
+    if (welcomeEl) welcomeEl.remove();
+    const text = userInput.value.trim();
+    const hasImage = !!lastUploadedImageBase64;
+
+    if (text === "" && !hasImage) return;
+
+    const imageToSend = lastUploadedImageBase64;
+
+    if (hasImage) {
+        appendImageMessage(imageToSend, 'user');
+    }
+    if (text !== "") {
+        appendMessage(text, 'user', true);
+    }
+
+    userInput.value = "";
+    removePendingImage();
+
+    const shimmerId = showShimmer();
+
+    try {
+        // 1. Tentukan target bahasa dengan instruksi tegas
+        const isIndonesian = currentLang !== 'en'; // Default ke ID jika bukan 'en'
+        const targetLanguage = isIndonesian ? 'Bahasa Indonesia' : 'English';
+        
+         // System Prompt yang diperketat
+        const systemPrompt = `Kamu adalah asisten AI yang pintar, ramah, dan komunikatif.
+ATURAN UTAMA KELUARAN (STRICT LANGUAGE RULE):
+- JAWAB SELALU DAN MUTLAK DALAM: ${targetLanguage.toUpperCase()}.
+- Walaupun pengguna bertanya dalam bahasa lain (misal Bahasa Inggris), kamu WAJIB menjawab sepenuhnya dalam ${targetLanguage}.
+- Untuk pertanyaan panjang, gunakan format Markdown (bold, list) agar rapi.
+- Untuk sapaan/basa-basi, jawab natural dan santai.
+ATURAN FORMAT JAWABAN (WAJIB):
+- LANGSUNG mulai dengan jawaban/isi. JANGAN menulis ulang, merangkum, atau mengomentari pertanyaan pengguna terlebih dahulu (contoh yang DILARANG: "Pengguna bertanya tentang...", "The user is asking...", "Baik, saya akan menjelaskan...").
+- JANGAN menampilkan proses berpikir, catatan internal, atau meta-komentar apa pun. Cukup keluarkan jawaban akhirnya saja.`;
+
+        let selectedModel = "openai/gpt-oss-120b";
+        let payloadMessages = [];
+
+        // 2. Susun Payload
+        if (hasImage) {
+            selectedModel = "qwen/qwen3.6-27b";
+
+            const questionText = text !== ""
+                ? text
+                : `Deskripsikan gambar ini secara akurat dan ringkas berdasarkan apa yang TERLIHAT SAJA. Sebutkan nama karakter jika kamu yakin, jika tidak yakin sebutkan ciri fisiknya saja. Jangan mengarang sejarah, tahun, atau asal-usul fiktif.`;
+
+            const userMessageContent = [
+                { type: "text", text: `[SYSTEM REQUIREMENT: Respond STRICTLY in ${targetLanguage}]\n\n${questionText}` },
+                { type: "image_url", image_url: { url: imageToSend } }
+            ];
+
+            payloadMessages = [{ role: "user", content: userMessageContent }];
+        } else {
+            // SUNTIKAN KUNCI: Menambahkan prefix penegas bahasa pada pesan USER
+            // Catatan: sengaja TIDAK memakai label "Pertanyaan User:" agar model tidak
+            // terpancing menulis ulang/merangkum pertanyaan sebelum menjawab.
+            const promptWithLanguageLock = `[INSTRUKSI UTAMA: Jawablah SELALU menggunakan ${targetLanguage}, abaikan jika pertanyaan di bawah menggunakan bahasa lain. Langsung jawab tanpa mengulang pertanyaan ini.]\n\n${text}`;
+
+            payloadMessages = [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: promptWithLanguageLock }
+            ];
+        }
+
+        // 3. Kirim ke API Groq
+        const response = await fetch(GROQ_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+                // Jika panggil API Groq langsung tanpa backend proxy, tambahkan:
+                // 'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: selectedModel,
+                messages: payloadMessages,
+                max_tokens: 2048
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error.message || JSON.stringify(data.error));
+        }
+        if (!data.choices || !data.choices[0]) {
+            throw new Error("Respon API tidak valid: " + JSON.stringify(data));
+        }
+
+        let botReply = data.choices[0]?.message?.content || "Tidak ada respon.";
+
+        // Pembersihan tag proses berpikir
+        botReply = botReply.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
+        // Pembersihan "bocoran" pengulangan/rangkuman pertanyaan user di awal jawaban.
+        // Sebelumnya hanya mengecek startsWith("The user") (case-sensitive, Inggris saja),
+        // sehingga variasi Bahasa Indonesia atau kapitalisasi lain lolos dan ikut tampil.
+        // Sekarang dicek dengan regex yang menutupi variasi umum, di paragraf pertama saja.
+        botReply = botReply.trim();
+        const leakPatterns = /^(the user|user is asking|user asks|pengguna (bertanya|menanyakan|ingin)|si user|permintaan (pengguna|user)|baik,? saya akan|oke,? (saya|mari) akan)/i;
+        const firstParts = botReply.split("\n\n");
+        if (firstParts.length > 1 && leakPatterns.test(firstParts[0].trim())) {
+            firstParts.shift();
+            botReply = firstParts.join("\n\n").trim();
+        }
+
+        removeShimmer(shimmerId);
+        appendMessage(botReply.trim(), 'bot', true);
+
+    } catch (error) {
+        removeShimmer(shimmerId);
+        appendMessage(`Error: ${error.message}`, 'bot', false);
+    }
+		}
+		
+// --- PILIH GAMBAR: HANYA TAMPILKAN PREVIEW, BELUM DIKIRIM ---
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 1024;
+            let width = img.width, height = img.height;
+
+            if (width > height && width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            // Simpan sebagai gambar yang MENUNGGU dikirim (belum masuk ke chat/API)
+            lastUploadedImageBase64 = compressedBase64;
+
+            const previewWrapper = document.getElementById('image-preview-wrapper');
+            const previewThumb = document.getElementById('image-preview-thumb');
+            previewThumb.src = compressedBase64;
+            previewWrapper.classList.add('active');
+
+            // Fokuskan ke input teks agar user bisa langsung menulis pertanyaan
+            userInput.focus();
+        };
+        img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+// --- BATALKAN GAMBAR YANG SEDANG DI-PREVIEW (BELUM TERKIRIM) ---
+function removePendingImage() {
+    lastUploadedImageBase64 = null;
+    const previewWrapper = document.getElementById('image-preview-wrapper');
+    const previewThumb = document.getElementById('image-preview-thumb');
+    if (previewWrapper) previewWrapper.classList.remove('active');
+    if (previewThumb) previewThumb.src = '';
+}
+
+
+        function appendImageMessage(imageUrl, sender, shouldSave = true) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', sender);
+
+            const avatarHTML = sender === 'user' 
+                ? '<div class="avatar"><span class="material-icons-outlined">person</span></div>'
+                : '<div class="avatar"><span class="material-icons-outlined">bolt</span></div>';
+
+            msgDiv.innerHTML = `${avatarHTML}<div class="content"><img src="${imageUrl}" class="chat-image" alt="Uploaded Image"></div>`;
+            chatView.appendChild(msgDiv);
+            chatView.scrollTop = chatView.scrollHeight;
+
+            if (shouldSave) {
+                // Simpan hanya placeholder, BUKAN base64 penuh agar localStorage tidak jebol
+                saveMessageToHistory('📷 [Gambar disematkan]', sender);
+            }
+        }
+
+        function showShimmer() {
+    const id = `shimmer-${Date.now()}`;
+    const shimmerHTML = `
+        <div class="message bot" id="${id}">
+            <div class="avatar"><span class="material-icons-outlined">auto_awesome</span></div>
+            <div class="content">
+                <div class="shimmer-loading">
+                    <div class="shimmer-block" style="width: 100%"></div>
+                    <div class="shimmer-block" style="width: 75%"></div>
+                </div>
+            </div>
+        </div>`;
+    chatView.insertAdjacentHTML('beforeend', shimmerHTML);
+    chatView.scrollTop = chatView.scrollHeight;
+    return id;
+}
+
+        function removeShimmer(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+// Variable untuk mencegah klik ganda saat proses penerjemahan berjalan
+let isTranslating = false;
+
+async function getTranslation(text, targetLang) {
+    const targetCode = targetLang === 'en' ? 'en' : 'id';
+
+    // 1. Jalur Utama: Memanggil Backend Vercel (Aman dari intipan)
+    try {
+        const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, targetLang })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const result = data.choices?.[0]?.message?.content?.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            if (result) return result;
+        }
+    } catch (err) {
+        console.warn("Backend error/limit. Beralih ke Google Translate...", err);
+    }
+
+    // 2. Jalur Cadangan (Google Translate)
+    try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data[0]) {
+            return data[0].map(item => item[0]).join('');
+        }
+    } catch (err) {
+        console.error("Gagal pada Google Translate:", err);
+    }
+
+    return text;
+}
+
+// Fungsi Utama Tombol Bahasa
+		async function toggleLanguage() {
+    if (isTranslating) return;
+    
+    currentLang = currentLang === 'id' ? 'en' : 'id';
+    const langBtn = document.getElementById('lang-btn');
+    if (langBtn) langBtn.innerText = '...';
+
+    // Update UI Statis
+    if (typeof localization !== 'undefined') {
+        if (document.getElementById('app-title')) document.getElementById('app-title').innerText = localization[currentLang].title;
+        if (document.getElementById('btn-new-chat')) document.getElementById('btn-new-chat').innerText = localization[currentLang].newChat;
+        if (document.getElementById('history-label')) document.getElementById('history-label').innerText = localization[currentLang].history;
+        if (typeof userInput !== 'undefined' && userInput) userInput.placeholder = localization[currentLang].placeholder;
+    }
+
+    // Update Layar Sambutan
+    const welcomeEl = document.getElementById('welcome-screen');
+    if (welcomeEl) {
+        showWelcomeScreen(false);
+    }
+
+    const messageElements = document.querySelectorAll('.message .content');
+    if (messageElements.length === 0) {
+        isTranslating = false;
+        if (langBtn) langBtn.innerText = currentLang === 'id' ? 'EN' : 'ID';
+        return;
+    }
+
+    isTranslating = true;
+
+    for (const el of messageElements) {
+        if (el.querySelector('img')) continue;
+
+        const parentMessage = el.closest('.message');
+        if (!parentMessage) continue;
+
+        // 1. Simpan teks asli pertama kali jika belum tersimpan
+        if (!parentMessage.dataset.originalText) {
+            let rawText = parentMessage.dataset.raw;
+            if (!rawText) {
+                const clone = el.cloneNode(true);
+                const existingCopyBtn = clone.querySelector('.copy-btn');
+                if (existingCopyBtn) existingCopyBtn.remove();
+                rawText = (clone.innerText || clone.textContent || '').trim();
+            }
+            parentMessage.dataset.originalText = rawText;
+        }
+
+        let targetText = '';
+
+        // 2. Jika kembali ke Bahasa Indonesia, ambil dari teks asli tanpa panggil API
+        if (currentLang === 'id') {
+            targetText = parentMessage.dataset.originalText;
+        } else {
+            // 3. Jika ke Bahasa Inggris, gunakan cache jika ada, atau translate sekali saja
+            if (parentMessage.dataset.translatedEn) {
+                targetText = parentMessage.dataset.translatedEn;
+            } else {
+                targetText = await getTranslation(parentMessage.dataset.originalText, 'en');
+                if (!parentMessage.dataset.originalText.includes('#')) {
+                    targetText = targetText.replace(/^#+\s*/gm, '');
+                }
+                parentMessage.dataset.translatedEn = targetText;
+            }
+        }
+
+        // 4. Update dataset.raw agar tombol salin membaca bahasa yang sedang aktif
+        parentMessage.dataset.raw = targetText;
+
+        // Render ulang ke DOM
+        if (typeof marked !== 'undefined' && parentMessage.classList.contains('bot')) {
+            el.innerHTML = marked.parse(targetText);
+        } else {
+            el.innerText = targetText;
+        }
+
+        // Update Tombol Salin
+        if (parentMessage.classList.contains('bot')) {
+            const oldCopyBtn = parentMessage.querySelector('.copy-btn');
+            if (oldCopyBtn) oldCopyBtn.remove();
+
+            const newEncodedText = encodeURIComponent(targetText);
+            const copyBtnHTML = `
+                <button class="copy-btn" onclick="copyMessageText(this, '${newEncodedText}')">
+                    <span class="material-icons-outlined" style="font-size: 12px;">content_copy</span> Salin
+                </button>
+            `;
+            el.insertAdjacentHTML('beforeend', copyBtnHTML);
+        }
+    }
+
+    isTranslating = false;
+    if (langBtn) langBtn.innerText = currentLang === 'id' ? 'EN' : 'ID';
+}
+
+
+    function copyMessageText(buttonElement, encodedText) {
+    const originalText = decodeURIComponent(encodedText);
+
+    // Menggunakan Clipboard API modern untuk menyalin teks
+    navigator.clipboard.writeText(originalText).then(() => {
+        // Ubah tampilan tombol sementara jadi "Tersalin!" biar interaktif
+        const originalHTML = buttonElement.innerHTML;
+        buttonElement.innerHTML = `<span class="material-icons-outlined" style="font-size: 14px; color: #34a853;">done</span> Tersalin!`;
+        buttonElement.style.borderColor = '#34a853';
+
+        // Kembalikan ke bentuk semula setelah 2 detik
+        setTimeout(() => {
+            buttonElement.innerHTML = originalHTML;
+            buttonElement.style.borderColor = '';
+        }, 2000);
+    }).catch(err => {
+        console.error('Gagal menyalin teks: ', err);
+        alert('Gagal menyalin teks ke clipboard.');
+    });
+}
+     window.onload = initApp;
+    </script>
+</body>
+</html>

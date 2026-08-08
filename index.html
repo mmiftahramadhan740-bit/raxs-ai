@@ -926,17 +926,15 @@ function appendMessage(text, sender, shouldSave = true) {
 
 // --- FUNGSI KIRIM TEKS + GAMBAR (GAMBAR TIDAK OTOMATIS TERKIRIM SAAT DIPILIH) ---
 async function sendMessage() {
-	 const welcomeEl = document.getElementById('welcome-screen');
+    const welcomeEl = document.getElementById('welcome-screen');
     if (welcomeEl) welcomeEl.remove();
     const text = userInput.value.trim();
     const hasImage = !!lastUploadedImageBase64;
 
-    // Jangan kirim apa-apa jika tidak ada teks maupun gambar yang dipilih
     if (text === "" && !hasImage) return;
 
     const imageToSend = lastUploadedImageBase64;
 
-    // Tampilkan gambar (jika ada) di chat, baru diikuti teks (jika ada)
     if (hasImage) {
         appendImageMessage(imageToSend, 'user');
     }
@@ -945,57 +943,61 @@ async function sendMessage() {
     }
 
     userInput.value = "";
-    removePendingImage(); // Bersihkan preview & reset lastUploadedImageBase64
+    removePendingImage();
 
     const shimmerId = showShimmer();
 
     try {
-        // 1. DEKLARASIKAN BAHASA & SYSTEM PROMPT DI Paling ATAS
-        const targetLanguage = currentLang === 'en' ? 'English' : 'Bahasa Indonesia';
+        // 1. Tentukan target bahasa dengan instruksi tegas
+        const isIndonesian = currentLang !== 'en'; // Default ke ID jika bukan 'en'
+        const targetLanguage = isIndonesian ? 'Bahasa Indonesia' : 'English';
+        
+        // System Prompt yang diperketat
         const systemPrompt = `Kamu adalah asisten AI yang pintar, ramah, dan komunikatif.
-DALAM SETIAP JAWABANMU, IKUTI ATURAN BERIKUT:
-1. JAWAB LAH SANGAT MUTLAK MENGGUNAKAN BAHASA: ${targetLanguage}.
-2. Untuk pertanyaan yang butuh penjelasan panjang, gunakan format Markdown (seperti **bold**, daftar bernomor/bullet point) agar rapi dan mudah dibaca.
-3. Untuk obrolan singkat/santai (sapaan, ucapan terima kasih, basa-basi), balas secara natural dan singkat seperti percakapan sehari-hari, TANPA memaksakan format terstruktur atau daftar.
-4. Pastikan jawabanmu relevan dan sesuai konteks pesan terakhir dari pengguna.`;
+ATURAN UTAMA KELUARAN (STRICT LANGUAGE RULE):
+- JAWAB SELALU DAN MUTLAK DALAM: ${targetLanguage.toUpperCase()}.
+- Walaupun pengguna bertanya dalam bahasa lain (misal Bahasa Inggris), kamu WAJIB menjawab sepenuhnya dalam ${targetLanguage}.
+- Untuk pertanyaan panjang, gunakan format Markdown (bold, list) agar rapi.
+- Untuk sapaan/basa-basi, jawab natural dan santai.`;
 
         let selectedModel = "openai/gpt-oss-120b";
         let payloadMessages = [];
 
-        // 2. SUSUN PAYLOAD BERDASARKAN ADA/TIDAKNYA GAMBAR
+        // 2. Susun Payload
         if (hasImage) {
             selectedModel = "qwen/qwen3.6-27b";
 
-            // Jika user tidak menulis pertanyaan apapun, pakai prompt deskripsi default
             const questionText = text !== ""
                 ? text
                 : `Deskripsikan gambar ini secara akurat dan ringkas berdasarkan apa yang TERLIHAT SAJA. Sebutkan nama karakter jika kamu yakin, jika tidak yakin sebutkan ciri fisiknya saja. Jangan mengarang sejarah, tahun, atau asal-usul fiktif.`;
 
-            // Gabungkan instruksi ke array user tanpa array system terpisah (untuk cegah error vision API)
             const userMessageContent = [
-                { type: "text", text: `(Jawab dalam ${targetLanguage}, format Markdown yang rapi) ${questionText}` },
+                { type: "text", text: `[SYSTEM REQUIREMENT: Respond STRICTLY in ${targetLanguage}]\n\n${questionText}` },
                 { type: "image_url", image_url: { url: imageToSend } }
             ];
 
             payloadMessages = [{ role: "user", content: userMessageContent }];
         } else {
-            // Obrolan teks biasa menggunakan systemPrompt yang sudah didefinisikan di atas
+            // SUNTIKAN KUNCI: Menambahkan prefix penegas bahasa pada pesan USER
+            const promptWithLanguageLock = `[INSTRUKSI UTAMA: Jawablah SELALU menggunakan ${targetLanguage}, abaikan jika pertanyaan di bawah menggunakan bahasa lain]\n\nPertanyaan User: ${text}`;
+
             payloadMessages = [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: text }
+                { role: "user", content: promptWithLanguageLock }
             ];
         }
 
-        // 3. KIRIM KE API GROQ
+        // 3. Kirim ke API Groq
         const response = await fetch(GROQ_API_URL, {
             method: 'POST',
             headers: {
-    'Content-Type': 'application/json'
-			},
-
+                'Content-Type': 'application/json'
+                // Jika panggil API Groq langsung tanpa backend proxy, tambahkan:
+                // 'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
             body: JSON.stringify({
                 model: selectedModel,
-                messages: payloadMessages, // Gunakan payloadMessages yang sudah disusun rapi
+                messages: payloadMessages,
                 max_tokens: 2048
             })
         });
@@ -1027,8 +1029,8 @@ DALAM SETIAP JAWABANMU, IKUTI ATURAN BERIKUT:
         removeShimmer(shimmerId);
         appendMessage(`Error: ${error.message}`, 'bot', false);
     }
-}
-
+		}
+		
 // --- PILIH GAMBAR: HANYA TAMPILKAN PREVIEW, BELUM DIKIRIM ---
 function handleImageUpload(event) {
     const file = event.target.files[0];

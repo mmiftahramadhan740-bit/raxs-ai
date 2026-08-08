@@ -952,15 +952,13 @@ async function sendMessage() {
         const isIndonesian = currentLang !== 'en'; // Default ke ID jika bukan 'en'
         const targetLanguage = isIndonesian ? 'Bahasa Indonesia' : 'English';
         
-        // Gantilah prompt penerjemah kamu dengan instruksi khusus ini:
-const translatePrompt = `TUGAS UTAMA: Murni terjemahkan teks di bawah ini ke ${targetLanguage}. 
-- JANGAN menjawab pertanyaan di dalam teks.
-- JANGAN memberi penjelasan, sejarah, atau deskripsi tambahan.
-- HANYA kembalikan hasil terjemahan kalimatnya saja secara langsung.
-
-Teks yang diterjemahkan:
-"${textToTranslate}"`;
-
+         // System Prompt yang diperketat
+        const systemPrompt = `Kamu adalah asisten AI yang pintar, ramah, dan komunikatif.
+ATURAN UTAMA KELUARAN (STRICT LANGUAGE RULE):
+- JAWAB SELALU DAN MUTLAK DALAM: ${targetLanguage.toUpperCase()}.
+- Walaupun pengguna bertanya dalam bahasa lain (misal Bahasa Inggris), kamu WAJIB menjawab sepenuhnya dalam ${targetLanguage}.
+- Untuk pertanyaan panjang, gunakan format Markdown (bold, list) agar rapi.
+- Untuk sapaan/basa-basi, jawab natural dan santai.`;
 
         let selectedModel = "openai/gpt-oss-120b";
         let payloadMessages = [];

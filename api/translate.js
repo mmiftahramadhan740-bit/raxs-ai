@@ -31,18 +31,19 @@ HARD RULES (do not break these under any circumstance):
     }
 
     try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: model || "llama-3.1-8b-instant",
-                messages: payloadMessages,
-                max_tokens: 2048
-            })
-        });
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: model || "gpt-oss-20b",
+            messages: payloadMessages,
+            max_tokens: 2048
+        })
+    });
+        
 
         const data = await response.json();
         return res.status(response.status).json(data);
